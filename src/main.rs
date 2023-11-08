@@ -1,42 +1,30 @@
-use std::{io::Write, net::TcpListener};
-use std::io::{BufRead, BufReader};
+use tokio::io::{AsyncWriteExt, BufReader, Result};
+use tokio::net::TcpListener;
+use crate::http::{Request, Response};
 
-use nom::AsBytes;
+mod http;
 
-fn main() {
-    let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
+#[tokio::main]
+async fn main() -> Result<()> {
+    let listener = TcpListener::bind("127.0.0.1:4221").await?;
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                println!("accepted new connection");
+    loop {
+        let (mut stream, _) = listener.accept().await?;
+        println!("accepted new connection");
 
-                let mut reader = BufReader::new(&mut stream);
+        let reader = BufReader::new(&mut stream);
 
-                let mut line = String::new();
-                reader.read_line(&mut line).expect("Could not read request");
+        let request = Request::deserialize(reader).await?;
+        println!("{:?}", request);
 
-                let mut first_line_iter = line.split_whitespace();
-                let _http_method = first_line_iter.next().unwrap();
-                let path = first_line_iter.next().unwrap();
+        let path = request.path.as_str();
 
-                let ok = "HTTP/1.1 200 OK\r\n\r\n";
-                let not_found = "HTTP/1.1 404 Not Found\r\n\r\n";
+        let response = if path.starts_with("/echo") {
+            Response::ok(path["/echo/".len()..].to_string())
+        } else {
+            Response::not_found()
+        };
 
-                let response = match path {
-                    "/" => ok,
-                    &_ => not_found,
-                };
-
-                let res = stream.write(response.as_bytes());
-                match res {
-                    Ok(_) => println!("Response is {}", response),
-                    Err(e) => println!("error: {}", e),
-                }
-            }
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
+        stream.write(response.to_string().as_bytes()).await?;
     }
 }

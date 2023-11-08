@@ -21,6 +21,8 @@ async fn main() -> Result<()> {
 
         let response = if path.starts_with("/echo") {
             Response::ok(path["/echo/".len()..].to_string())
+        } else if path.starts_with("/") {
+            Response::ok("".to_string())
         } else {
             Response::not_found()
         };

@@ -123,11 +123,11 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn ok(body: &str) -> Self {
+    pub fn ok(body: &str, content_type: ContentType) -> Self {
         return Self {
             protocol: "HTTP/1.1".to_string(),
             status: StatusCode::Ok,
-            content_type: ContentType::TextPlain,
+            content_type,
             content_len: body.len(),
             body: body.to_string(),
         };
@@ -203,6 +203,7 @@ impl Display for StatusCode {
 #[derive(Debug)]
 pub enum ContentType {
     TextPlain,
+    OctetStream,
 }
 
 impl Display for ContentType {
@@ -212,6 +213,7 @@ impl Display for ContentType {
             "{}",
             match self {
                 ContentType::TextPlain => "text/plain".to_string(),
+                ContentType::OctetStream => "application/octet-stream".to_string(),
             }
         );
     }

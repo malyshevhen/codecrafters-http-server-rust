@@ -96,7 +96,7 @@ impl Request {
             println!("Header: {}", line);
 
             let mut split_header = line.split_whitespace();
-            let key = split_header.next().unwrap().to_string();
+            let key = split_header.next().unwrap().trim_end_matches(":").to_string();
             let value = split_header.next().unwrap().to_string();
             headers.insert(key, value);
         }

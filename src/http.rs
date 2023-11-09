@@ -40,7 +40,6 @@ impl Request {
 
     pub async fn deserialize(buf: &[u8]) -> Result<Box<Self>> {
         println!("Parse request...");
-        println!("Incoming Buffer {:?}", buf);
         
         let mut lines = buf.lines();
 
@@ -70,7 +69,6 @@ impl Request {
 
         println!("Requested path: {}", path);
         println!("{}", "=".repeat(40));
-        // println!("Unparsed request tail is: {:?}", &lines);
 
         let mut headers = HashMap::new();
 
@@ -102,7 +100,6 @@ impl Request {
         }
 
         println!("{}", "=".repeat(40));
-        // println!("Unparsed request tail is: {:?}", &lines);
 
         return Ok(Box::new(Self::new(method, path, headers)));
     }

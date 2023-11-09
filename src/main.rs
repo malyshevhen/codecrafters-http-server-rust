@@ -16,7 +16,13 @@ async fn main() -> Result<()> {
 
             loop {
                 match stream.read(&mut buf).await {
-                    Ok(b) => b,
+                    Ok(b) => {
+                        if b == 0 {
+                            break b;
+                        } else {
+                            b
+                        }
+                    }
                     Err(_) => panic!("Could not read from stream."),
                 };
 

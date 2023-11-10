@@ -57,7 +57,9 @@ impl Request {
         let mut body = String::new();
 
         while let Some(line) = lines.next_line().await? {
-
+            if line.contains('\x00') {
+                continue;
+            }
             if line.is_empty() {
                 continue;
             } else if is_start_line(&line) {

@@ -1,7 +1,78 @@
+use crate::hashes::Hashes;
+use anyhow::Context;
+use clap::{Parser, Subcommand};
+use serde::Deserialize;
 use serde_json::{self, Value};
-use std::env;
+use std::path::PathBuf;
 
-#[allow(dead_code)]
+pub mod hashes;
+
+#[derive(Debug, Clone, Deserialize)]
+struct Torrent {
+    announce: String,
+    info: Info,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct Info {
+    name: String,
+    #[serde(rename = "piece length")]
+    plength: usize,
+    pieces: Hashes,
+    #[serde(flatten)]
+    keys: Keys,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum Keys {
+    SingleFile { length: usize },
+    MultiFile { files: File },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct File {
+    length: usize,
+    path: Vec<String>,
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[command(subcommand)]
+    commend: Command,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    Decode { value: String },
+    Info { torrent: PathBuf },
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    match args.commend {
+        Command::Decode { value } => {
+            let value = decode_bencoded_value(&value).0;
+            println!("{value}");
+        }
+        Command::Info { torrent } => {
+            let dot_torrent = std::fs::read(torrent).context("read torrent file")?;
+            let t =
+                serde_bencode::from_bytes::<Torrent>(&dot_torrent).context("parse torrent file")?;
+            println!("Tracker URL: {}", t.announce);
+            if let Keys::SingleFile { length } = t.info.keys {
+                println!("Length: {length}");
+            } else {
+                unimplemented!();
+            }
+        }
+    }
+
+    anyhow::Ok(())
+}
+
 fn decode_bencoded_value(encoded_value: &str) -> (Value, &str) {
     match encoded_value.chars().next() {
         Some('i') => {
@@ -55,17 +126,4 @@ fn decode_bencoded_value(encoded_value: &str) -> (Value, &str) {
         _ => {}
     }
     panic!("Unhandled encoded value: {}", encoded_value)
-}
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    let command = &args[1];
-
-    if command == "decode" {
-        let encoded_value = &args[2];
-        let (decoded_value, _) = decode_bencoded_value(encoded_value);
-        println!("{}", decoded_value);
-    } else {
-        println!("unknown command: {}", args[1])
-    }
 }

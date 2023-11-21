@@ -1,19 +1,20 @@
 use crate::hashes::Hashes;
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
+use sha1::{Digest, Sha1};
 use std::path::PathBuf;
 
 pub mod hashes;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct Torrent {
     announce: String,
     info: Info,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct Info {
     name: String,
     #[serde(rename = "piece length")]
@@ -23,14 +24,14 @@ struct Info {
     keys: Keys,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 enum Keys {
     SingleFile { length: usize },
     MultiFile { files: File },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct File {
     length: usize,
     path: Vec<String>,
@@ -47,30 +48,6 @@ struct Args {
 enum Command {
     Decode { value: String },
     Info { torrent: PathBuf },
-}
-
-fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-
-    match args.commend {
-        Command::Decode { value } => {
-            let value = decode_bencoded_value(&value).0;
-            println!("{value}");
-        }
-        Command::Info { torrent } => {
-            let dot_torrent = std::fs::read(torrent).context("read torrent file")?;
-            let t =
-                serde_bencode::from_bytes::<Torrent>(&dot_torrent).context("parse torrent file")?;
-            println!("Tracker URL: {}", t.announce);
-            if let Keys::SingleFile { length } = t.info.keys {
-                println!("Length: {length}");
-            } else {
-                unimplemented!();
-            }
-        }
-    }
-
-    anyhow::Ok(())
 }
 
 fn decode_bencoded_value(encoded_value: &str) -> (Value, &str) {
@@ -126,4 +103,34 @@ fn decode_bencoded_value(encoded_value: &str) -> (Value, &str) {
         _ => {}
     }
     panic!("Unhandled encoded value: {}", encoded_value)
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    match args.commend {
+        Command::Decode { value } => {
+            let value = decode_bencoded_value(&value).0;
+            println!("{value}");
+        }
+        Command::Info { torrent } => {
+            let dot_torrent = std::fs::read(torrent).context("read torrent file")?;
+            let t =
+                serde_bencode::from_bytes::<Torrent>(&dot_torrent).context("parse torrent file")?;
+            println!("Tracker URL: {}", t.announce);
+            if let Keys::SingleFile { length } = t.info.keys {
+                println!("Length: {length}");
+            } else {
+                unimplemented!();
+            }
+            let info_encoded =
+                serde_bencode::to_bytes(&t.info).context("re-encode info session")?;
+            let mut hasher = Sha1::new();
+            hasher.update(&info_encoded);
+            let info_hash = hasher.finalize();
+            println!("Info Hash: {}", hex::encode(&info_hash));
+        }
+    }
+
+    anyhow::Ok(())
 }

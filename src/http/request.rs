@@ -27,7 +27,7 @@ impl Display for Request {
         }
         resp_string.push_str("\r\n");
 
-        return write!(fmt, "{}", resp_string);
+        write!(fmt, "{}", resp_string)
     }
 }
 
@@ -51,7 +51,7 @@ impl Request {
                 request_builder = request_builder.header(header);
                 continue;
             } else if !line.is_empty() {
-                let body = line.trim_end_matches("\x00").to_string();
+                let body = line.trim_end_matches('\x00').to_string();
                 request_builder = request_builder.body(body);
                 break;
             } else {
@@ -59,9 +59,9 @@ impl Request {
             }
         }
         let request = request_builder.build()?;
-        println!("{:<12} - Parsed request: \n{}", "REQUEST",request.to_string());
+        println!("{:<12} - Parsed request: \n{}", "REQUEST",request);
 
-        return Ok(request);
+        Ok(request)
     }
 
     pub fn get_header_value(&self, header_name: &str) -> Option<&str> {
@@ -72,12 +72,12 @@ impl Request {
 fn parse_header(line: &str) -> Result<(String, String)> {
     let mut split_header = line.split_whitespace();
     if let Some(key) = split_header.next() {
-        let key = key.trim_end_matches(":").to_string();
+        let key = key.trim_end_matches(':').to_string();
         let value = split_header.next().unwrap_or_default().to_string();
 
         return Ok((key, value));
     };
-    return Err(Error::CanNotParseHeader);
+    Err(Error::CanNotParseHeader)
 }
 
 fn is_header(line: &str) -> bool {
@@ -100,7 +100,7 @@ fn parse_start_line(line: &str) -> Result<(Method, String)> {
         None => panic!("Path was not read correctly."),
     };
 
-    return Ok((method, path));
+    Ok((method, path))
 }
 
 pub fn is_start_line(line: &str) -> bool {
@@ -177,12 +177,12 @@ impl RequestBuilder {
     }
 
     pub fn build(self) -> Result<Request> {
-        let method = self.method.unwrap_or_else(|| Method::Get);
+        let method = self.method.unwrap_or(Method::Get);
         let Some(path) = self.path else {
             return Err(Error::NoUrl);
         };
         let protocol = self.protocol.unwrap_or_else(|| "HTTP/1.1".to_string());
-        let body = self.body.unwrap_or_else(|| "".to_string());
+        let body = self.body.unwrap_or_default();
 
         Ok(Request {
             method,

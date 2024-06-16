@@ -7,9 +7,9 @@ use crate::utils::{read_file_content, write_file};
 pub async fn handle_request(request: Request) -> Result<Response> {
     println!("{:<12} - handle_request", "HANDLERS");
 
-    let path_tokens = request.path.split("/").collect::<Vec<&str>>();
+    let path_tokens = request.path.split('/').collect::<Vec<&str>>();
 
-    if let Some(root_path) = path_tokens.get(1).map(|s| *s) {
+    if let Some(root_path) = path_tokens.get(1).copied() {
         let response = match root_path {
             "" => home_handler(),
             "echo" => echo_handler(request),
@@ -38,13 +38,13 @@ fn echo_handler(request: Request) -> Response {
 
     let path = request.path.as_str();
     let dynamic_path = &path["/echo/".len()..];
-    return Response::ok(dynamic_path, ContentType::TextPlain);
+    Response::ok(dynamic_path, ContentType::TextPlain)
 }
 
 fn home_handler() -> Response {
     println!("{:<12} - home_handler", "HANDLERS");
 
-    return Response::ok("", ContentType::TextPlain);
+    Response::ok("", ContentType::TextPlain)
 }
 
 async fn file_path_handler(request: Request) -> Result<Response> {
@@ -87,13 +87,13 @@ async fn file_post_handler(full_path: &str, file_content: &str) -> Result<Respon
 
     write_file(full_path, file_content).await?;
 
-    return Ok(Response::created(ContentType::OctetStream));
+    Ok(Response::created(ContentType::OctetStream))
 }
 
 async fn file_get_handler(full_path: &str) -> Result<Response> {
     println!("{:<12} - file_get_handler", "HANDLERS");
 
-    let response = read_file_content(&full_path)
+    let response = read_file_content(full_path)
         .await
         .map_or(Response::not_found(), |content| {
             Response::ok(&content, ContentType::OctetStream)

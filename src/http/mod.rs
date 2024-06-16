@@ -1,8 +1,9 @@
+pub use self::error::Error;
+pub use self::request::Method;
+pub use self::response::{ContentType, Response};
+
 pub mod error;
 pub mod request;
 pub mod response;
 pub mod handlers;
 
-pub use self::error::{Error, Result};
-pub use self::request::{Request, Method};
-pub use self::response::{Response, ContentType, StatusCode};

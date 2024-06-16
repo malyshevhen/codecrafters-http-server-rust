@@ -33,7 +33,7 @@ async fn handle_connection(mut stream: TcpStream) -> Result<()> {
         }
         let request = Request::parse_from_bytes(&buf).await?;
         let response = handle_request(request).await?;
-        stream.write(response.to_string().as_bytes()).await?;
+        stream.write_all(response.to_string().as_bytes()).await?;
     }
 
     println!("{:<12} - handle_connection - Close The Connection.", "MAIN");
